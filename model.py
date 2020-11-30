@@ -7,9 +7,10 @@ class shallow_water():
     particular set of parameters.
     '''
 
-    def __init__(self, L, f_0 = 1e-4, beta=1e-11, g=10, gamma = 1e-6, rho = 1e3, H = 1e3, tau_0 = 0.2):
+    def __init__(self, Lx, Ly, f_0 = 1e-4, beta=1e-11, g=10, gamma = 1e-6, rho = 1e3, H = 1e3, tau_0 = 0.2):
 
-        self.L = L
+        self.Lx = Lx
+        self.Ly = Ly
         self.f_0 = f_0
         self.beta = beta
         self.g = g
@@ -26,7 +27,7 @@ class shallow_water():
 
     def calc_f1_f2(self, x):
 
-        epsilon = self.gamma / (self.L * self.beta)
+        epsilon = self.gamma / (self.Ly * self.beta)
         b = (-1 + np.sqrt(1 + (2*np.pi*epsilon)**2))/(2*epsilon)
         a = (-1 - np.sqrt(1 + (2*np.pi*epsilon)**2))/(2*epsilon)
 
@@ -35,10 +36,10 @@ class shallow_water():
         return f1, f2
 
     def analytical_solution(self, x, y, eta):
-        f1, f2 = self.calc_f1_f2(x= x/self.L)
+        f1, f2 = self.calc_f1_f2(x= x/self.Lx)
         k1 = self.tau_0/(np.pi*self.gamma*self.rho*self.H)
-        k2 = self.f_0*self.L/self.g
-        k3 = np.pi*y/self.L
+        k2 = self.f_0*self.Lx/self.g
+        k3 = np.pi*y/self.Lx
 
         ust =  -k1*f1*np.cos(k3)
         vst =   k1*f2*np.sin(k3)
@@ -46,5 +47,5 @@ class shallow_water():
         eta_0 = -0.2
         etast = eta_0 + k1*k2*((self.gamma/(self.f_0*np.pi))*f2*np.cos(k3) +
                                  (1/np.pi)*f1*(np.sin(k3)*(1+self.beta*y/self.f_0)+
-                                 self.beta*self.L/(self.f_0*np.pi) * np.cos(k3)) )
+                                 self.beta*self.Lx/(self.f_0*np.pi) * np.cos(k3)) )
         return  ust, vst, etast
