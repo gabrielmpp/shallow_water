@@ -6,8 +6,14 @@ from scipy import interpolate
 from shallow_water import config  # File with integration parameters
 from shallow_water.model import shallow_water
 
+def gaussian_initial_condition(nx, ny, sigma=.5, mu=0):
+    f = lambda x: np.exp(-((x - mu) ** 2 / (2.0 * sigma ** 2)))
+    x, y = np.meshgrid(np.linspace(-1, 1, nx), np.linspace(-1, 1, ny))
+    d = np.sqrt(x * x + y * y)
+    return .1 * f(d)
 
-def init_C_grid(Lx, Ly, dx, dy, time_vector):
+
+def init_C_grid(Lx, Ly, dx, dy, time_vector, initial_condition):
     ntime = len(time_vector)
     # Initializing coordinates with one extra zonal grid point in u and one extra meridional grid point in v
     u_coords = {'x': np.arange(-0.5 * dx, Lx + 0.5 * dx, dx), 'y': np.arange(-Ly/2, Ly/2, dy)}
@@ -19,11 +25,8 @@ def init_C_grid(Lx, Ly, dx, dy, time_vector):
     eta_array = xr.DataArray(np.zeros([ny, nx]), dims=('y', 'x'), coords={'y': eta_coords['y'], 'x': eta_coords['x']})
     u_array = xr.DataArray(np.zeros([ny, nx + 1]), dims=('y', 'x'), coords={'y': u_coords['y'], 'x': u_coords['x']})
     v_array = xr.DataArray(np.zeros([ny + 1, nx]), dims=('y', 'x'), coords={'y': v_coords['y'], 'x': v_coords['x']})
-    sigma, mu = .5, 0.0
-    f = lambda x: np.exp(-((x - mu) ** 2 / (2.0 * sigma ** 2)))
-    x, y = np.meshgrid(np.linspace(-1, 1, nx), np.linspace(-1, 1, ny))
-    d = np.sqrt(x * x + y * y)
-    eta_array = xr.DataArray(f(d)/10, dims=('y', 'x'), coords={'y': eta_coords['y'], 'x': eta_coords['x']})
+
+    eta_array = xr.DataArray(initial_condition, dims=('y', 'x'), coords={'y': eta_coords['y'], 'x': eta_coords['x']})
 
 
     # Initializing 3D dataarrays with a time dimension to keep record of the time steps
@@ -121,7 +124,7 @@ def second_order_interp(A, u, v, dt):
     return (A)
 
 
-def run_integration(sw_model):
+def run_integration(sw_model, initial_condition):
     '''
     Function to integrate the shallow water model in the Arakawa C-grid.
     Please, refer to config.py and model.py for more information about the model parameters.
@@ -142,7 +145,7 @@ def run_integration(sw_model):
     ntime = int(config.integration_length * 86400 / dt)
 
     time_vector = np.arange(0, ntime * dt, dt)
-    eta, u, v, eta_dump, u_dump, v_dump = init_C_grid(Lx, Ly, dx, dy, time_vector)
+    eta, u, v, eta_dump, u_dump, v_dump = init_C_grid(Lx, Ly, dx, dy, time_vector, initial_condition)
     tau_x, tau_y = sw_model.calc_tau(u.y, Ly)
     beta_plane = (sw_model.f_0 + sw_model.beta * eta.y)
 
@@ -266,4 +269,5 @@ if __name__ == '__main__':
     The netcdfs and figures in the folder will be overwritten every time you run the model
     '''
     sw_model = shallow_water(config.Lx, config.Ly, f_0=0)  # Create instance of sw model with default parameters
-    eta, u, v = run_integration(sw_model)
+    initial_condition = gaussian_initial_condition(config.nx, config.ny)
+    eta, u, v = run_integration(sw_model, initial_condition)
